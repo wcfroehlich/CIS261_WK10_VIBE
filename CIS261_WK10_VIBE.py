@@ -5,6 +5,7 @@
 
 # VIBE AI-assisted coding process: building the grade calculator step by step.
 
+FILE_NAME = "student_grades.txt"
 students = []
 
 
@@ -77,6 +78,104 @@ def add_student():
 	print(f"Letter Grade: {student['letter_grade']}")
 
 
+def display_student_details(student):
+	"""Display all details for one student."""
+	print(f"Name: {student['name']}")
+	print(f"Student ID: {student['student_id']}")
+	print(f"Test 1: {student['score1']:.2f}")
+	print(f"Test 2: {student['score2']:.2f}")
+	print(f"Test 3: {student['score3']:.2f}")
+	print(f"Average: {student['average']:.2f}")
+	print(f"Letter Grade: {student['letter_grade']}")
+
+
+def search_student():
+	"""Search for students by name without considering letter case."""
+	search_name = input("Enter student name to search: ").strip().lower()
+	found_students = [
+		student for student in students
+		if student["name"].lower() == search_name
+	]
+
+	if not found_students:
+		print("Student not found.")
+		return
+
+	for student in found_students:
+		print("\nStudent Found")
+		display_student_details(student)
+
+
+def display_class_statistics():
+	"""Display average, highest, and lowest student averages."""
+	if not students:
+		print("No students are available for class statistics.")
+		return
+
+	class_average = sum(student["average"] for student in students) / len(students)
+	highest_student = max(students, key=lambda student: student["average"])
+	lowest_student = min(students, key=lambda student: student["average"])
+
+	print("\nClass Statistics")
+	print(f"Class Average: {class_average:.2f}")
+	print(
+		f"Highest Student Average: {highest_student['average']:.2f} "
+		f"({highest_student['name']})"
+	)
+	print(
+		f"Lowest Student Average: {lowest_student['average']:.2f} "
+		f"({lowest_student['name']})"
+	)
+
+
+def save_students():
+	"""Save all student records to the grade file."""
+	try:
+		with open(FILE_NAME, "w", encoding="utf-8") as file:
+			for student in students:
+				file.write(
+					f"{student['name']}|{student['student_id']}|"
+					f"{student['score1']}|{student['score2']}|{student['score3']}|"
+					f"{student['average']}|{student['letter_grade']}\n"
+				)
+		return True
+	except OSError as error:
+		print(f"Error saving student records: {error}")
+		return False
+
+
+def load_students():
+	"""Load student records from the grade file when it exists."""
+	try:
+		with open(FILE_NAME, "r", encoding="utf-8") as file:
+			for line_number, line in enumerate(file, start=1):
+				fields = line.rstrip("\n").split("|")
+				if len(fields) != 7:
+					print(f"Skipping invalid record on line {line_number}.")
+					continue
+
+				try:
+					student = {
+						"name": fields[0],
+						"student_id": fields[1],
+						"score1": float(fields[2]),
+						"score2": float(fields[3]),
+						"score3": float(fields[4]),
+						"average": float(fields[5]),
+						"letter_grade": fields[6],
+					}
+				except ValueError:
+					print(f"Skipping invalid record on line {line_number}.")
+					continue
+
+				students.append(student)
+	except FileNotFoundError:
+		# The file may not exist on the first run.
+		pass
+	except OSError as error:
+		print(f"Error loading student records: {error}")
+
+
 def display_students():
 	"""Display all students in a formatted table."""
 	if not students:
@@ -102,6 +201,8 @@ def display_students():
 
 def main():
 	"""Run the student grade calculator menu."""
+	# VIBE development added file loading so saved records are available at startup.
+	load_students()
 	print("Student Grade Calculator")
 
 	while True:
@@ -112,18 +213,28 @@ def main():
 		print("4. View Class Statistics")
 		print("5. Save and Exit")
 
-		choice = input("Enter your choice: ")
+		try:
+			choice = input("Enter your choice: ").strip()
+		except (EOFError, KeyboardInterrupt):
+			choice = "5"
 
 		if choice == "1":
 			add_student()
 		elif choice == "2":
 			display_students()
 		elif choice == "3":
-			print("Search Student by Name will be added in a later VIBE iteration.")
+			search_student()
 		elif choice == "4":
-			print("Class Statistics will be added in a later VIBE iteration.")
+			display_class_statistics()
 		elif choice == "5":
-			print("Thank you for using the Student Grade Calculator.")
+			if save_students():
+				print(f"Student records saved to {FILE_NAME}.")
+			print("Thank you for using the Student Grade Calculator. Goodbye!")
+			break
+		elif choice == "\x1b":
+			if save_students():
+				print(f"Student records saved to {FILE_NAME}.")
+			print("ESC pressed. Student Grade Calculator is exiting.")
 			break
 		else:
 			print("Invalid choice. Please enter a number from 1 to 5.")
